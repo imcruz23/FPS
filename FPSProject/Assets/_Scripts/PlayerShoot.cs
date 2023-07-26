@@ -8,7 +8,13 @@ public class PlayerShoot : MonoBehaviour
 {
     //public PlayerGunSelector _playerGunSelector;
     public static Action OnShoot;
+    public Rigidbody _rb;
 
+
+    private void Start()
+    {
+        TryGetComponent(out _rb);
+    }
     // Update is called once per frame
     void Update()
     {

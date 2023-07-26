@@ -10,4 +10,5 @@ public class GunData : ScriptableObject
     public float _damage;
     public float _maxDistance;
     public float _fireRate;
+    public bool _canKickBack; // Es una de las armas por defecto
 }

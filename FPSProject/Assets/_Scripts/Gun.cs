@@ -17,11 +17,14 @@ public class Gun : MonoBehaviour
 
     public GunRecoil _gunRecoil;
 
+    private PlayerKickBack _playerKickBack;
+
     private void Start()
     {
         PlayerShoot.OnShoot += Shoot;
         _trailPool = new ObjectPool<TrailRenderer>(CreateTrail);
         TryGetComponent(out _gunRecoil);
+        TryGetComponent(out _playerKickBack);
     }
 
     private bool CanShoot() => _timeSinceLastShot > _gunData._fireRate;
@@ -29,11 +32,14 @@ public class Gun : MonoBehaviour
     {
         if(CanShoot())
         {
+            // Particle effect
             _shootSystem.Play();
+            // We need to make a raycast to make sure we hit something
             if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward, out RaycastHit hit, _gunData._maxDistance))
             {
                 Debug.Log(hit.transform.name);
-
+                Debug.DrawRay(hit.point, hit.normal, Color.green, 4f);
+                // Trail in case we did hit something
                 StartCoroutine(
                     PlayTrail(
                         _shootSystem.transform.position,
@@ -41,9 +47,12 @@ public class Gun : MonoBehaviour
                         hit
                         )
                     );
+                if (_gunData._canKickBack && _playerKickBack)
+                    _playerKickBack.KickBackPlayer();
             }
             else
             {
+                // Trail in case we fail, going forward through its lifespan
                 StartCoroutine(
                     PlayTrail(
                         _shootSystem.transform.position,

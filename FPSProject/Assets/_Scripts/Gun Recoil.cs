@@ -26,6 +26,8 @@ public class GunRecoil : MonoBehaviour
 
     Vector3 _rot;
 
+    [Header("Player Gun Movement")]
+    public float _kickBackForce;
     private void Start()
     {
         _gunPosition = transform.localPosition;
