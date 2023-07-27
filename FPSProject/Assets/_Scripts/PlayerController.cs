@@ -12,7 +12,7 @@ public class PlayerController : MonoBehaviour
     private Vector3 _mouseLook;
     private Rigidbody _rb;
 
-    private float _playerHeight = 2f;
+    private float _playerHeight = 3.6f;
 
     [Header("Speed variables")]
     public float _moveSpeed = 6f;
@@ -54,13 +54,11 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        //_isGrounded = Physics.CheckSphere(transform.position - new Vector3(0, 0.5f, 0), _groundDistance, _groundLayerMask);
         IsGrounded = CheckGrounded();
         //Debug.Log(_isGrounded);
         CheckInput();
         ControlDrag();
         HandleMovement();
-
     }
 
     private void FixedUpdate()
@@ -71,7 +69,7 @@ public class PlayerController : MonoBehaviour
     private bool CheckGrounded()
     {
    
-        return Physics.CheckSphere(transform.position - new Vector3(0, 1, 0), _groundDistance, _groundLayerMask);
+        return Physics.CheckSphere(transform.position - new Vector3(0, _playerHeight/2, 0), _groundDistance, _groundLayerMask);
         //return Physics.Raycast(_groundHit.position, Vector3.down * 0.01f, _groundLayerMask);
     }
 
@@ -89,15 +87,14 @@ public class PlayerController : MonoBehaviour
         _verticalInput = Input.GetAxisRaw("Vertical");
         // Comprobar el input de salto
         if (Input.GetKeyDown(_jumpKey) && IsGrounded)
-        {
             Jump();
-        }
     }
 
     private void Jump()
     {
-        //_rb.AddForce(transform.up * _jumpForce, ForceMode.VelocityChange);
-        _rb.AddForce(transform.up * Mathf.Sqrt(_jumpForce * -1.8f * Physics.gravity.y), ForceMode.Impulse);
+        _rb.velocity = new Vector3(_rb.velocity.x, 0f, _rb.velocity.z);
+        _rb.AddForce(transform.up * _jumpForce, ForceMode.Impulse);
+        //_rb.AddForce(transform.up * Mathf.Sqrt(_jumpForce * -2f * Physics.gravity.y), ForceMode.Impulse);
     }
 
     private void HandleMovement()
@@ -138,6 +135,6 @@ public class PlayerController : MonoBehaviour
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.red;
-        Gizmos.DrawSphere(transform.position - new Vector3(0,1,0), _groundDistance);
+        Gizmos.DrawSphere(transform.position - new Vector3(0, _playerHeight / 2, 0), _groundDistance);
     }
 }

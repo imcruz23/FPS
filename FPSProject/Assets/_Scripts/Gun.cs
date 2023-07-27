@@ -19,6 +19,8 @@ public class Gun : MonoBehaviour
 
     private PlayerKickBack _playerKickBack;
 
+    public GunShootConfig _gunShootConfig;
+
     private void Start()
     {
         PlayerShoot.OnShoot += Shoot;
@@ -34,34 +36,43 @@ public class Gun : MonoBehaviour
         {
             // Particle effect
             _shootSystem.Play();
-            // We need to make a raycast to make sure we hit something
-            if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward, out RaycastHit hit, _gunData._maxDistance))
+            Vector3 spread = Vector3.zero;
+
+            for(int i=0; i<_gunShootConfig._bulletsPerTap; ++i)
             {
-                Debug.Log(hit.transform.name);
-                Debug.DrawRay(hit.point, hit.normal, Color.green, 4f);
-                // Trail in case we did hit something
-                StartCoroutine(
-                    PlayTrail(
-                        _shootSystem.transform.position,
-                        hit.point,
-                        hit
-                        )
-                    );
-                if (_gunData._canKickBack && _playerKickBack)
-                    _playerKickBack.KickBackPlayer();
+                // We need to calculate the spread of each bullet (if we have bullet more than 1 bullet per tap)
+                if (_gunShootConfig._bulletsPerTap > 1 && i > 0) // i works as both an interator and bullets shot in each iteration
+                    spread = _gunShootConfig.GenerateSpread();
+
+                // We need to make a raycast to make sure we hit something
+                if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward + spread, out RaycastHit hit, _gunData._maxDistance))
+                {
+                    Debug.Log(hit.transform.name);
+                    Debug.DrawRay(hit.point, hit.normal, Color.green, 4f);
+                    // Trail in case we did hit something
+                    StartCoroutine(
+                        PlayTrail(
+                            _shootSystem.transform.position,
+                            hit.point,
+                            hit
+                            )
+                        );
+                    if (_gunData._canKickBack && _playerKickBack)
+                        _playerKickBack.KickBackPlayer();
+                }
+                else
+                {
+                    // Trail in case we fail, going forward through its lifespan
+                    StartCoroutine(
+                        PlayTrail(
+                            _shootSystem.transform.position,
+                            (Camera.main.transform.forward + spread) * _trailConfig._missDistance,
+                            new RaycastHit()
+                            )
+                        );
+                }
+                _timeSinceLastShot = 0;
             }
-            else
-            {
-                // Trail in case we fail, going forward through its lifespan
-                StartCoroutine(
-                    PlayTrail(
-                        _shootSystem.transform.position,
-                        Camera.main.transform.forward * _trailConfig._missDistance,
-                        new RaycastHit()
-                        )
-                    );
-            }
-            _timeSinceLastShot = 0;
             _cameraRecoil.RecoilFire();
             _gunRecoil.RecoilWeapon();
         }
