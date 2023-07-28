@@ -115,7 +115,7 @@ public class PlayerController : MonoBehaviour
         {
             // Save input in the buffer
             _buffer.Enqueue(_jumpKey);
-           //Invoke(nameof(DequeueAction), 0.5f); // Dequeue action if its made > 0.5s before making contact with the ground
+           Invoke(nameof(DequeueAction), 0.5f); // Dequeue action if its made > 0.5s before making contact with the ground
 
             if(IsGrounded) // Check if grounded
             {
@@ -125,7 +125,7 @@ public class PlayerController : MonoBehaviour
                     {
                         Debug.Log("Buffer");
                         Jump(); // Do jumping
-                        //_buffer.Dequeue(); // Dequeuing action
+                        _buffer.Dequeue(); // Dequeuing action
                     }
                 }
             }  
@@ -149,8 +149,10 @@ public class PlayerController : MonoBehaviour
     private void HandleMovement()
     {
         _rb.AddForce(Vector3.down * 10f * Time.deltaTime); //Extra gravity for adding more ground velocity
+
         // Aplicamos movimiento de forma separada a cada componente
         _movement = transform.forward * _verticalInput + transform.right * _horizontalInput;
+
         // Clampeamos a 1 el movimiento
         _movement = Vector3.ClampMagnitude(_movement, 1f);
 
@@ -162,13 +164,13 @@ public class PlayerController : MonoBehaviour
     {
         if (isOnSlope()) // Slope movement
         {
-            _rb.AddForce(_slopeMoveDirection * _moveSpeed * _acceleration, ForceMode.Acceleration);
+            _rb.AddForce(_slopeMoveDirection * _moveSpeed * _acceleration, ForceMode.Force);
 
             if (_rb.velocity.y > 0) // Adding extra gravity if we are bumping on a slope
-                _rb.AddForce(Vector3.down * 100f, ForceMode.Force);
+                _rb.AddForce(Vector3.down * 70f, ForceMode.Force);
         }
         else if(IsGrounded) // Ground movement
-                _rb.AddForce(_movement.normalized * _moveSpeed * _acceleration, ForceMode.Acceleration);
+                _rb.AddForce(_movement.normalized * _moveSpeed * _acceleration, ForceMode.Force);
 
         else if (!IsGrounded) // Air movement
             _rb.AddForce(_movement.normalized * _moveSpeed * (_acceleration * _airAcceleration), ForceMode.Force);
