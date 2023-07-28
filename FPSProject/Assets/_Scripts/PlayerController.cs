@@ -22,7 +22,7 @@ public class PlayerController : MonoBehaviour
     [Header("Ground Layer")]
     public LayerMask _groundLayerMask;
     private bool _isGrounded;
-    private float _groundDistance = 0.1f;
+    private float _groundDistance = 0.2f;
 
     //[SerializeField] Transform _groundHit;
 
@@ -37,6 +37,12 @@ public class PlayerController : MonoBehaviour
     float _groundDrag = 6f;
     float _airDrag = 2f;
 
+    [Header("Slope Settings")]
+    public float _maxSteepAngle = 60f;
+
+    // Input buffer
+    Queue<KeyCode> _buffer;
+
     public bool IsGrounded { get => _isGrounded; set => _isGrounded = value; }
 
     private void Awake()
@@ -49,6 +55,7 @@ public class PlayerController : MonoBehaviour
     {
         TryGetComponent(out _rb);
         _rb.freezeRotation = true;
+        _buffer = new Queue<KeyCode>();
     }
 
     // Update is called once per frame
@@ -73,21 +80,63 @@ public class PlayerController : MonoBehaviour
         //return Physics.Raycast(_groundHit.position, Vector3.down * 0.01f, _groundLayerMask);
     }
 
+    /// <summary>
+    /// Check if we are in a slope
+    /// </summary>
+    /// <returns>True if we are on a slope, false if we are not</returns>
     private bool isOnSlope()
     {
-        if (Physics.Raycast(transform.position, Vector3.down, out _slopeHit, _playerHeight / 2 + 0.5f))
+        if (Physics.Raycast(transform.position, Vector3.down, out _slopeHit, _playerHeight * 0.5f + 0.5f))
         {
-            return _slopeHit.normal != Vector3.up; // Estamos en un slope porque la normal no apunta hacia arriba
+            float angle = Vector3.Angle(Vector3.up, _slopeHit.normal);
+            return angle < _maxSteepAngle && angle != 0; // Estamos en un slope porque la normal no apunta hacia arriba
+
         }
         return false;
     }
+
+    private bool IsWalkableSlope(RaycastHit p_hit)
+    {
+        if (Vector3.Angle(p_hit.normal, Vector3.down) < _maxSteepAngle)// walkable
+        {
+            return true;
+        }
+        // Not walkable
+        return false;
+    }
+
     private void CheckInput()
     {
         _horizontalInput = Input.GetAxisRaw("Horizontal");
         _verticalInput = Input.GetAxisRaw("Vertical");
-        // Comprobar el input de salto
-        if (Input.GetKeyDown(_jumpKey) && IsGrounded)
-            Jump();
+
+        // Check Input Jump Key
+        if (Input.GetKeyDown(_jumpKey))
+        {
+            // Save input in the buffer
+            _buffer.Enqueue(_jumpKey);
+           //Invoke(nameof(DequeueAction), 0.5f); // Dequeue action if its made > 0.5s before making contact with the ground
+
+            if(IsGrounded) // Check if grounded
+            {
+                if (_buffer.Count > 0) // If there is something in the buffer
+                {
+                    if (_buffer.Peek() == KeyCode.Space) // Check if the first action is jumping
+                    {
+                        Debug.Log("Buffer");
+                        Jump(); // Do jumping
+                        //_buffer.Dequeue(); // Dequeuing action
+                    }
+                }
+            }  
+        }     
+    }
+
+    // Dequeuing an action if its made too early
+    private void DequeueAction()
+    {
+        if(_buffer.Count > 0)
+            _buffer.Dequeue();
     }
 
     private void Jump()
@@ -99,26 +148,30 @@ public class PlayerController : MonoBehaviour
 
     private void HandleMovement()
     {
+        _rb.AddForce(Vector3.down * 10f * Time.deltaTime); //Extra gravity for adding more ground velocity
         // Aplicamos movimiento de forma separada a cada componente
         _movement = transform.forward * _verticalInput + transform.right * _horizontalInput;
         // Clampeamos a 1 el movimiento
         _movement = Vector3.ClampMagnitude(_movement, 1f);
+
         if (isOnSlope())
-            _slopeMoveDirection = Vector3.ProjectOnPlane(_movement, _slopeHit.normal);
+            _slopeMoveDirection = Vector3.ProjectOnPlane(_movement, _slopeHit.normal).normalized;
     }
 
     private void MovePlayer()
     {
-        if (IsGrounded) //Movimiento normal
-            //_rb.velocity =  _movement * _currentSpeed;
-            _rb.AddForce(_movement.normalized * _moveSpeed * _acceleration, ForceMode.Acceleration);
+        if (isOnSlope()) // Slope movement
+        {
+            _rb.AddForce(_slopeMoveDirection * _moveSpeed * _acceleration, ForceMode.Acceleration);
 
-        else if (IsGrounded && isOnSlope()) //Movimiento si hay cuestas
-            //_rb.velocity = _slopeMoveDirection * _currentSpeed;
-            _rb.AddForce(_slopeMoveDirection.normalized * _moveSpeed * _acceleration, ForceMode.Acceleration);
+            if (_rb.velocity.y > 0) // Adding extra gravity if we are bumping on a slope
+                _rb.AddForce(Vector3.down * 100f, ForceMode.Force);
+        }
+        else if(IsGrounded) // Ground movement
+                _rb.AddForce(_movement.normalized * _moveSpeed * _acceleration, ForceMode.Acceleration);
 
-        else if (!IsGrounded) //Movimiento si el jugador esta cayendo
-            _rb.AddForce(_movement.normalized * _moveSpeed * (_acceleration * _airAcceleration), ForceMode.Acceleration);
+        else if (!IsGrounded) // Air movement
+            _rb.AddForce(_movement.normalized * _moveSpeed * (_acceleration * _airAcceleration), ForceMode.Force);
     }
 
     private void ControlDrag()
