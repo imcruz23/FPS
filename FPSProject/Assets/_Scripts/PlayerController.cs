@@ -174,6 +174,7 @@ public class PlayerController : MonoBehaviour
 
         else if (!IsGrounded) // Air movement
             _rb.AddForce(_movement.normalized * _moveSpeed * (_acceleration * _airAcceleration), ForceMode.Force);
+
     }
 
     private void ControlDrag()
